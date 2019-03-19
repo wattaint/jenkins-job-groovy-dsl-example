@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: etl-%JOB_BASE_NAME%-%BUILD_NUMBER%
+spec:
+  containers:
+    - name: etl-container
+      workingDir: /usr/src/app/target      
+      image: "us.gcr.io/tmn-th-equator-ci/acm.dp.eq.generic.database.etl:%TAG_NAME%"
+      env:
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /opt/service-account/%SERVICE_ACCOUNT%
+        - name: VAULT_LEADER
+          value: %VAULT_LEADER%
+        - name: VAULT_TOKEN
+          value: %VAULT_TOKEN%
+        - name: JAVA_OPTS
+          value: -Xmx1024m -Xms256m
+        - name: TZ
+          value: Asia/Bangkok
+      command: 
+        - "/bin/sh"
+        - "-c"
+        - 'java -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:MaxRAMFraction=1 -jar acn-dp-generic-database-etl.jar %PARAMS%'
+      volumeMounts:
+          # name must match the volume name below
+          - name: secret-volume
+            mountPath: /opt/service-account
+            readOnly: true
+      resources:
+        limits:
+          cpu: 512m
+          memory: 1024Mi
+        requests:
+          cpu: 128m
+          memory: 512Mi
+  imagePullSecrets:
+    - name: gcr-docker-oauth
+  nodeSelector:
+    deployment-nodegroup: %ENV_TIER%
+  volumes:
+    - name: secret-volume
+      secret:
+        secretName: %SECRET_NAME%
+  restartPolicy: Never

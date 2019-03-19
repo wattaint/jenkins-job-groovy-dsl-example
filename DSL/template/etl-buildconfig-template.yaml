@@ -1,0 +1,35 @@
+kind: "BuildConfig"
+apiVersion: "v1"
+metadata:
+  name: "etl-eq-build" 
+spec:
+  nodeSelector:
+    deployment-nodegroup: %ENV_TIER%
+  source:
+    type: "Git"
+    git: 
+      uri: "https://bitbucket.org/ascendcorp/acm-dp-vn-etl-config"
+      ref: "master"
+    sourceSecret:
+      name: "git-token"
+  strategy: 
+    type: "Docker"
+    dockerStrategy:
+      contextDir: "ETL"
+      dockerfilePath: "ETL/Dockerfile"
+      forcePull: true
+      pullSecret:
+        name: "gcr-docker-oauth"
+  resources: 
+    limits: 
+      cpu: "512m"
+      memory: "512Mi"
+    requests:
+      cpu: "128m"
+      memory: "256Mi"
+  output:
+    to:
+      kind: "DockerImage"
+      name: "us.gcr.io/acm-vn-staging/acm.dp.vn.generic.database.etl:%TAG_NAME%"
+    pushSecret:
+      name: "gcr-docker-oauth"
