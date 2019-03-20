@@ -91,11 +91,6 @@ def createJob(String folderName, String jobName, LinkedHashMap params, String se
 #!/bin/bash
 set -e
 
-IMAGE_TAG_FILE_PATH=${JENKINS_HOME}/image_version/acm.dp.eq.generic.database.etl.version
-if ! [ -f $IMAGE_TAG_FILE_PATH ]; then
-  echo "latest" > $IMAGE_TAG_FILE_PATH
-if
-
 ### GET VAULT TOKEN
 VAULT_LEADER=$(curl -X GET -k https://vault-cluster.common-cicd-platform.svc:8200/v1/sys/leader |jq-linux64 -r '.leader_cluster_address')
 
