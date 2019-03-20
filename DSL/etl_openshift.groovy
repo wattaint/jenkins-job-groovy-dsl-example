@@ -5,8 +5,10 @@ itemList = evaluate("""
     import org.yaml.snakeyaml.Yaml
     Yaml parser = new Yaml()
     def itemList = parser.load(("$WORKSPACE/$CHECKOUT_PATH/$ENV_TIER/jobs.yaml" as File).text)
-    println itemList
-    return itemList""")
+    itemList.each { println it }
+    // println itemList
+    return itemList
+""")
 
 String serviceAccountJson = itemList.serviceAccountJson
 String secretName = itemList.secretName
