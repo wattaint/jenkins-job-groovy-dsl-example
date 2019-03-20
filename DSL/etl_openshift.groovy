@@ -9,7 +9,10 @@ itemList = evaluate("""
         println '---------'
         println it
     }
-    // println itemList
+
+    Yaml yaml = new Yaml()
+    output = yaml.dump(itemList)
+    println output
     return itemList
 """)
 
