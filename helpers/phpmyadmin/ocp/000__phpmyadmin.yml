@@ -22,14 +22,26 @@ items:
           containers:
             - image: us.gcr.io/acm-inter-staging/acm.dp.eq.helper.phpmyadmin:4.8.5
               name: phpmyadmin
-              command:
-                - sleep
-              args:
-                - infinity
+              # command:
+              #   - sleep
+              # args:
+              #   - infinity
+              ports:
+                - containerPort: 8080
+
+              livenessProbe:
+                initialDelaySeconds: 5
+                periodSeconds: 10
+                tcpSocket:
+                  port: 8080
+              readinessProbe:
+                initialDelaySeconds: 5
+                periodSeconds: 30
+                tcpSocket:
+                  port: 8080
               imagePullPolicy: Always
               env:
                 - name: PMA_HOST
                   value: "10.14.24.200"
                 - name: PMA_PORT
                   value: "3306"
-          

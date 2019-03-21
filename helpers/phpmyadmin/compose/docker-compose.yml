@@ -4,9 +4,7 @@ services:
     image: us.gcr.io/acm-inter-staging/acm.dp.eq.helper.phpmyadmin:4.8.5
     build:
       context: ..
-      
-
+    network_mode: host
     ports:
-      - 443:443
-      - 80:80
+      - 80:8080
     command: httpd -DFOREGROUND

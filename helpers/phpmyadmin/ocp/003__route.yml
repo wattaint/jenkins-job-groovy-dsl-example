@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Route
+metadata:
+  name: phpmyadmin
+  annotations:
+    haproxy.router.openshift.io/timeout: 4m
+    openshift.io/host.generated: 'true'
+    template.openshift.io/expose-uri: 'http://{.spec.host}{.spec.path}'
+  labels:
+    app: phpmyadmin
+    exposure: general
+spec:
+  host: phpmyadmin-eq-dataplatform-staging.cicd.ascendmoney-dev.internal
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+  to:
+    kind: Service
+    name: phpmyadmin-http
+    
