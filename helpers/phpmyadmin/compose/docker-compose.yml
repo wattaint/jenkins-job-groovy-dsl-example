@@ -3,7 +3,8 @@ services:
   app:
     image: us.gcr.io/acm-inter-staging/acm.dp.eq.helper.phpmyadmin:4.8.5
     build:
-      context: ..
+      context: ../src
+      dockerfile: ../Dockerfile
     network_mode: host
     ports:
       - 80:8080
