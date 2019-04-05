@@ -1,0 +1,5 @@
+{
+    "etl_image_dir": "image_version",
+    "etl_image_version_filename": "acm.dp.eq.generic.database.etl.version"
+}
+  
