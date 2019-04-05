@@ -12,12 +12,41 @@ itemList = evaluate("""
     println "=================================="
     return itemList
 """)
+etl_image_conf = evaluate("""
+    import groovy.json.JsonSlurper
+    println "========== Load JSON config ============"
+    def inputFile = new File("$WORKSPACE/$CHECKOUT_PATH/config.json")
+    def InputJSON = new JsonSlurper().parseText(inputFile.text)
+    println InputJSON.each{ println it }
+    println "=================================="
+    return InputJSON
+""")
 
 String serviceAccountJson = itemList.serviceAccountJson
 String secretName = itemList.secretName
 
 ArrayList jobList = itemList.jobs
 createDirJobs(null, jobList, serviceAccountJson, secretName)
+createJobStat()
+
+def createJobStat() {
+    folder('Tools') {
+        description('Folder contains monitoring or utils jobs')
+    }
+    job('Tools/stats') {
+        steps {
+            shell('''\
+export ETL_IMAGE_VERSION_FILE_NAME="'''+etl_image_conf.etl_image_version_filename+'''"
+export ETL_IMAGE_VERSION_FILE_PATH=${JENKINS_HOME}/'''+etl_image_conf.etl_image_dir+'''/${ETL_IMAGE_VERSION_FILE_NAME}
+python ${JENKINS_HOME}/template/ocp-job-stats.py
+            ''')
+        }
+
+        triggers {
+            cron("*/30 * * * *")
+        }
+    }
+}
 
 def createDirJobs(String folderName, ArrayList collection, String serviceAccountJson, String secretName) {
     if (folderName != null) {
@@ -57,86 +86,71 @@ def createJob(String folderName, String jobName, LinkedHashMap params, String se
         parameters {
             params.each { key, value ->
                 if (key != "trigger_cron") {
-                    
                     if (value.contains(' '))
-                            value = '\"'+value+'\"'
-                            
+                        value = '\"'+value+'\"'
                     stringParam(key, value, '')
-                    
-                    if (key != "podType"){                        
-                        paramsString += getParamString(key, value)                    
-                    }
+                    paramsString += getParamString(key, value)                    
                 }
             }
         }
-        
         logRotator {
             numToKeep(14)
         }
-        
         if (params.trigger_cron != null){
             triggers {
                 cron(params.trigger_cron)
             }
         }
-        
-        String podTypeString = "etl-template.yaml"
-        if (params.podType != null){
-            podTypeString = params.podType
-        }
-
         steps {
             shell('''\
-
 #!/bin/bash
 set -e
 
-### GET VAULT TOKEN
-VAULT_LEADER=$(curl -X GET -k https://vault-cluster.common-cicd-platform.svc:8200/v1/sys/leader |jq-linux64 -r '.leader_cluster_address')
-
-OCP_NAMESPACE=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
-IFS=- read APP_SCOPE APP_SERVICE_GROUP  ENV_NAME <<< $OCP_NAMESPACE
-
-TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
-VAULT_TOKEN=$(curl --request POST --data "{\\"jwt\\": \\"$TOKEN\\", \\"role\\": \\"$APP_SCOPE-$APP_SERVICE_GROUP-read-only-$ENV_NAME-role\\"}" -k ${VAULT_LEADER}/v1/auth/kubernetes/login | jq-linux64 -r .auth.client_token)
-
-APP_NAME=acn-dp-generic-database-etl
-VAULT_DATA=$(curl --silent -H "X-Vault-Token: $VAULT_TOKEN" -X GET -k ${VAULT_LEADER}/v1/secret/$APP_SCOPE/$APP_SERVICE_GROUP/$ENV_NAME/apps/$APP_NAME | jq-linux64 -r .data)
-
-IS_QUERY_SUCCESS=$(echo ${VAULT_DATA})
-if [[ -z "${IS_QUERY_SUCCESS}" ]]; then
-  echo "Default Value of isQuerySuccess is ${IS_QUERY_SUCCESS}."
- echo "ERROR!! : Cannot fetch data from vault."
- exit 1
-else
- echo "Default Value of isQuerySuccess is ${IS_QUERY_SUCCESS}."
- echo "SUCCESS!! : Fetched data from vault."
-fi
-
-
-### ETL
-export PARAMS="'''+paramsString+'''"
-export podTypeTemplate="'''+podTypeString+'''"
+export ETL_IMAGE_VERSION_FILE_NAME="''' + etl_image_conf.etl_image_version_filename + '''"
+export ETL_IMAGE_VERSION_FILE_PATH=${JENKINS_HOME}/'''+etl_image_conf.etl_image_dir+'''/${ETL_IMAGE_VERSION_FILE_NAME}
+export ETL_TEMPLATE_OUTPUT=etl-${JOB_BASE_NAME}-${BUILD_NUMBER}.yaml
+export PARAMS="'''+paramsString.trim()+'''"
 # Escape "/" -> "\\/" and "&" -> "\\&" charactor
 export ESC_PARAMS=`echo $PARAMS |sed -e 's#&#\\\\\\\\\\\\\\\\\\\\\\\\&#g' |sed -e 's#/#\\\\\\/#g'`
+if [ -f ${ETL_IMAGE_VERSION_FILE_PATH} ]; then
+    etl_tag=$(cat $ETL_IMAGE_VERSION_FILE_PATH)
+    if [ -z "${etl_tag}" ]; then
+        echo "Empty etl version!, Please re update etl version!"
+        exit 255
+    else
+        export TAG_NAME=${etl_tag}
+    fi
+else
+    echo "ETL verion file not found! Please re update etl verion!"
+    echo ${ETL_IMAGE_VERSION_FILE_PATH}
+    echo "---------------"
+    exit 255
+fi
 
-export TAG_NAME=$(cat $JENKINS_HOME/image_version/acm.dp.eq.generic.database.etl.version)
-sed "s/%BUILD_NUMBER%/${BUILD_NUMBER}/g" ~/template/${podTypeTemplate} \\
-|sed "s/%JOB_BASE_NAME%/${JOB_BASE_NAME}/g" \\
-|sed "s/%SERVICE_ACCOUNT%/'''+serviceAccountJson+'''/g" \\
-|sed "s/%SECRET_NAME%/'''+secretName+'''/g" \\
-|sed "s/%TAG_NAME%/${TAG_NAME}/g" \\
-|sed "s#%VAULT_LEADER%#${VAULT_LEADER}#g" \\
-|sed "s/%VAULT_TOKEN%/${VAULT_TOKEN}/g" \\
-|sed "s/%ENV_TIER%/${ENV_TIER}/g" \\
-|sed "s/%PARAMS%/$ESC_PARAMS/g" \\
-> etl-${JOB_BASE_NAME}-${BUILD_NUMBER}.yaml
+#  sed "s/%BUILD_NUMBER%/${BUILD_NUMBER}/g" ~/template/etl-template.yaml \\
+#  |sed "s/%JOB_BASE_NAME%/${JOB_BASE_NAME}/g" \\
+#  |sed "s/%SERVICE_ACCOUNT%/'''+serviceAccountJson+'''/g" \\
+#  |sed "s/%SECRET_NAME%/'''+secretName+'''/g" \\
+#  |sed "s/%TAG_NAME%/${TAG_NAME}/g" \\
+#  |sed "s/%ENV_TIER%/${ENV_TIER}/g" \\
+#  |sed "s/%PARAMS%/$ESC_PARAMS/g" \\
+#  > etl-${JOB_BASE_NAME}-${BUILD_NUMBER}.yaml
 
-cp ~/template/wait-until-pod.sh wait-until-pod.sh
+JSON_STRING=$( jq -n \\
+                  --arg service_account "''' + serviceAccountJson + '''" \\
+                  --arg secret_name "''' + secretName + '''" \\
+                  '{SERVICE_ACCOUNT: $service_account, SECRET_NAME: $secret_name}' )
+
+compile-env.sh ${JENKINS_HOME}/templates/etl-template.yaml \\
+${ETL_TEMPLATE_OUTPUT} \\
+"$JSON_STRING"
+
+cp ${JENKINS_HOME}/scripts/wait-until-pod.sh wait-until-pod.sh
 chmod 755 wait-until-pod.sh
 
-cat etl-${JOB_BASE_NAME}-${BUILD_NUMBER}.yaml
-oc create -f etl-${JOB_BASE_NAME}-${BUILD_NUMBER}.yaml
+cat ${ETL_TEMPLATE_OUTPUT}
+
+oc create -f ${ETL_TEMPLATE_OUTPUT}
 
 # Wait until the pods is running, within 5 mins timeout
 POD_NAME=etl-${JOB_BASE_NAME}-${BUILD_NUMBER}
