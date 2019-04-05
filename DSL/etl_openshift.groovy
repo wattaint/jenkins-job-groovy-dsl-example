@@ -141,11 +141,11 @@ JSON_STRING=$( jq -n \\
                   --arg secret_name "''' + secretName + '''" \\
                   '{SERVICE_ACCOUNT: $service_account, SECRET_NAME: $secret_name}' )
 
-compile-env.sh ${JENKINS_HOME}/templates/etl-template.yaml \\
+compile-env.sh ${JENKINS_HOME}/template/etl-template.yaml \\
 ${ETL_TEMPLATE_OUTPUT} \\
 "$JSON_STRING"
 
-cp ${JENKINS_HOME}/scripts/wait-until-pod.sh wait-until-pod.sh
+cp ${JENKINS_HOME}/template/wait-until-pod.sh wait-until-pod.sh
 chmod 755 wait-until-pod.sh
 
 cat ${ETL_TEMPLATE_OUTPUT}

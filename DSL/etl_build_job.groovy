@@ -46,7 +46,7 @@ export ETL_TEMPLATE_FILE=etl-buildconfig-${BUILD_NUMBER}.yaml
 compile-env.sh ETL/Dockerfile.ejs ETL/Dockerfile
 
 compile-env.sh \\
-${JENKINS_HOME}/templates/etl-buildconfig-template.yaml \\
+${JENKINS_HOME}/template/etl-buildconfig-template.yaml \\
 ${ETL_TEMPLATE_FILE}
 
 echo "=== APPLY BUILD SPEC ==="
