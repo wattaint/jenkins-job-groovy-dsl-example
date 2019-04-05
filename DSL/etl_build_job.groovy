@@ -2,7 +2,7 @@
 String folderName = "1_BUILD_JOB"
 String jobName = "0-Build-Etl-Config"
 
-boolean isDevEnv = "$ENV_TIER".toLowerCase().equals("qa")
+boolean isDevEnv = "$ENV_TIER".toLowerCase().equals("staging")
 
 folder(folderName) {
   description('Folder contains job that build the etl image')

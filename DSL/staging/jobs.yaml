@@ -4,9 +4,9 @@ secretName: gcp-dp-gcs
 _job: &default_job
   envTier: staging
   fetchFromLastSuccess: "1 hour ago"
-  username: "{crypt}AM6XgWy2wFxqFZ5MW7cRBky8uDDOopG8sJkszHjzKJbCFlAMIfrj1nBJcwau8K7yhxcHp2R2ytvl"
-  password: "{crypt}AM6XgWzDJV2tTQOJ4IadYUX5M-oaWm0oql4dCntW7mCszgCwmHAuHYnr3fq2bRR1W1zv8CU9i-bf"
-  bucketName: acm-dp-ocp-eq-ph-staging-source-archive
+  username: "{crypt}ADAfIeF-buwkHykM20_Kx81Ro9rBsBIfCO6vOZq7Wja3KwLOgFHTP4on4Dv8VS8oCKT3RFmP1N3v"
+  password: "{crypt}ADAfIeHUGfzCgrfWy4_HYwfMvrYIRixBnUtpcV0WEuskFaAJbzUyZ_VjThjbsYY1actMJwHWWL8RFAI3XzuJIor6OHcXrRF0oKkLYBUmVQYQ7iQCUuSv8z8"
+  bucketName: acm-dp-ocp-eq-vn-staging-source-archive
   trigger_cron: "H */1 * * *"
 
 jobs:
@@ -14,12 +14,12 @@ jobs:
     - eq.agent.accreditation:
         <<: *default_job
         profile: acm-eq/agent_accreditation
-        dataSourceUrl: jdbc:mysql://ph1n-equator-db01:3306/agent_staging
+        dataSourceUrl: jdbc:mysql://10.14.24.200:3306/agent_dev
         
     - eq.agent.additional:
         <<: *default_job
         profile: acm-eq/agent_additional
-        dataSourceUrl: jdbc:mysql://ph1n-equator-db01:3306/agent_staging?useUnicode=yes&characterEncoding=UTF-8&useLegacyDatetimeCode=false&serverTimezone=UTC
+        dataSourceUrl: jdbc:mysql://10.14.24.200:3306/agent_dev?useUnicode=yes&characterEncoding=UTF-8&useLegacyDatetimeCode=false&serverTimezone=UTC
 
 
     # - eq.agent.address:
