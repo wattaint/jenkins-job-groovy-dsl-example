@@ -1,31 +1,13 @@
 // import org.yaml.snakeyaml.Yaml
 
-itemList = evaluate("""
-    @Grab('org.yaml:snakeyaml')
-    import org.yaml.snakeyaml.Yaml
-    Yaml parser = new Yaml()
-    def itemList = parser.load(("$WORKSPACE/$CHECKOUT_PATH/$ENV_TIER/jobs.yaml" as File).text)
-    println "========== jobs.yaml ============"
-    Yaml yaml = new Yaml()
-    output = yaml.dump(itemList)
-    println output
-    println "=================================="
-    return itemList
-""")
-etl_image_conf = evaluate("""
-    import groovy.json.JsonSlurper
-    println "========== Load JSON config ============"
-    def inputFile = new File("$WORKSPACE/$CHECKOUT_PATH/config.json")
-    def InputJSON = new JsonSlurper().parseText(inputFile.text)
-    println InputJSON.each{ println it }
-    println "=================================="
-    return InputJSON
+Utils = evaluate evaluate("""
+  new File("$JENKINS_HOME/template/jenkins_script_utils.groovy").text
 """)
 
-String serviceAccountJson = itemList.serviceAccountJson
-String secretName = itemList.secretName
+String serviceAccountJson = Utils.getItemList().serviceAccountJson
+String secretName = Utils.getItemList().secretName
 
-ArrayList jobList = itemList.jobs
+ArrayList jobList = Utils.getItemList().jobs
 createDirJobs(null, jobList, serviceAccountJson, secretName)
 createJobStat()
 
@@ -36,14 +18,16 @@ def createJobStat() {
     job('Tools/stats') {
         steps {
             shell('''\
-export ETL_IMAGE_VERSION_FILE_NAME="'''+etl_image_conf.etl_image_version_filename+'''"
-export ETL_IMAGE_VERSION_FILE_PATH=${JENKINS_HOME}/'''+etl_image_conf.etl_image_dir+'''/${ETL_IMAGE_VERSION_FILE_NAME}
+export ETL_BUCKET_NAME="''' + Utils.getBucketName() + '''"
+export ETL_PROJECT_ID="'''  + Utils.getGcsServiceAccountData().project_id + '''"
+export ETL_IMAGE_VERSION_FILE_NAME="'''+Utils.getEtlImageConf().etl_image_version_filename+'''"
+export ETL_IMAGE_VERSION_FILE_PATH=${JENKINS_HOME}/'''+Utils.getEtlImageConf().etl_image_dir+'''/${ETL_IMAGE_VERSION_FILE_NAME}
 python ${JENKINS_HOME}/template/ocp-job-stats.py
             ''')
         }
 
         triggers {
-            cron("*/30 * * * *")
+            cron("H * * * *")
         }
     }
 }
@@ -94,7 +78,7 @@ def createJob(String folderName, String jobName, LinkedHashMap params, String se
             }
         }
         logRotator {
-            numToKeep(14)
+            daysToKeep(14)
         }
         if (params.trigger_cron != null){
             triggers {
@@ -106,8 +90,8 @@ def createJob(String folderName, String jobName, LinkedHashMap params, String se
 #!/bin/bash
 set -e
 
-export ETL_IMAGE_VERSION_FILE_NAME="''' + etl_image_conf.etl_image_version_filename + '''"
-export ETL_IMAGE_VERSION_FILE_PATH=${JENKINS_HOME}/'''+etl_image_conf.etl_image_dir+'''/${ETL_IMAGE_VERSION_FILE_NAME}
+export ETL_IMAGE_VERSION_FILE_NAME="''' + Utils.getEtlImageConf().etl_image_version_filename + '''"
+export ETL_IMAGE_VERSION_FILE_PATH=${JENKINS_HOME}/'''+Utils.getEtlImageConf().etl_image_dir+'''/${ETL_IMAGE_VERSION_FILE_NAME}
 export ETL_TEMPLATE_OUTPUT=etl-${JOB_BASE_NAME}-${BUILD_NUMBER}.yaml
 export PARAMS="'''+paramsString.trim()+'''"
 # Escape "/" -> "\\/" and "&" -> "\\&" charactor
@@ -141,7 +125,7 @@ JSON_STRING=$( jq -n \\
                   --arg secret_name "''' + secretName + '''" \\
                   '{SERVICE_ACCOUNT: $service_account, SECRET_NAME: $secret_name}' )
 
-compile-env.sh ${JENKINS_HOME}/template/etl-template.yaml \\
+compile-env.sh ${JENKINS_HOME}/templates/etl-template.yaml \\
 ${ETL_TEMPLATE_OUTPUT} \\
 "$JSON_STRING"
 

@@ -2,6 +2,7 @@ import httplib
 import os
 import re
 import urllib2
+import getpass
 
 INFLUXDB_HOST           = 'dp-influx.ascendanalyticshub.com'
 INFLUXDB_DATABASE       = 'jenkins_ocp_stats'
@@ -80,13 +81,13 @@ def get_fields():
     ret["dsl_repo"]                  = rename_bitbucket_repo(os.environ.get("BITBUCKET_DSL_REPO", ""))
     ret["dp_build"]                  = os.environ.get("DP__JENKINS_BASE__BUILD_VERSION", "")
     ret["jenkins_version"]           = os.environ.get("JENKINS_VERSION", "")
-    ret["ocp_site"]                  = os.environ.get("OCP_SITE_NAME", "")
-    ret["env_tier"]                  = os.environ.get("ENV_TIER", "")
-    ret["ocp_namespace"]             = ocp_name_space()
     ret["ocp_jenkins_image_version"] = os.environ.get("OPENSHIFT_JENKINS_IMAGE_VERSION", "")
     ret["ocp_build_namespace"]       = os.environ.get("OPENSHIFT_BUILD_NAMESPACE", "")
-
+    ret["user_name"]                 = getpass.getuser()
+    ret["user_uid"]                  = str(os.getuid())
+    
     ret = merge_two_dict(ret, get_env_value())
+    ret = merge_two_dict(ret, get_tags())
 
     return ret
 
@@ -100,6 +101,7 @@ def get_tags():
     ret['env_tier']             = os.environ.get("ENV_TIER", "")
     ret["ocp_site"]             = os.environ.get("OCP_SITE_NAME", "")
     ret["ocp_namespace"]        = ocp_name_space()
+    ret["deployment_name"]      = os.environ.get("DEPLOYMENT_NAME", "")
 
     return ret
 
