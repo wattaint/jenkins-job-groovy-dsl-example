@@ -15,8 +15,8 @@ spec:
         - name: TZ
           value: Etc/UTC
       command: 
-        - "/bin/sh"
-        - "-c"
+        # - "/bin/sh"
+        # - "-c"
         - "java"
         - "-XX:+UnlockExperimentalVMOptions"
         - "-XX:+UseCGroupMemoryLimitForHeap"
