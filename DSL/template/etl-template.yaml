@@ -9,7 +9,7 @@ spec:
       image: "us.gcr.io/tmn-th-equator-ci/acm.dp.eq.generic.database.etl:<%- TAG_NAME %>"
       env:
         - name: GOOGLE_APPLICATION_CREDENTIALS
-          value: /opt/service-account/%SERVICE_ACCOUNT%        
+          value: /opt/service-account/<%- SERVICE_ACCOUNT %>
         - name: JAVA_OPTS
           value: -Xmx1024m -Xms256m
         - name: TZ
