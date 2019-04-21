@@ -69,11 +69,15 @@ def createJob(String folderName, String jobName, LinkedHashMap params, String se
         String paramsString = ""
         parameters {
             params.each { key, value ->
-                if (key != "trigger_cron") {
-                    if (value.contains(' '))
-                        value = '\"'+value+'\"'
+                if (['trigger_cron'].contains(key)) {
+
+                } else {
+                    // def shouldUseDblQuote = [' '].find { item -> value.contains(item) }
+                    // if (shouldUseDblQuote)
+                    //     value = '\"'+value+'\"'
+                        
                     stringParam(key, value, '')
-                    paramsString += getParamString(key, value)                    
+                    paramsString += getParamString(key, value)
                 }
             }
         }
@@ -125,7 +129,7 @@ JSON_STRING=$( jq -n \\
                   --arg secret_name "''' + secretName + '''" \\
                   '{SERVICE_ACCOUNT: $service_account, SECRET_NAME: $secret_name}' )
 
-compile-env.sh ${JENKINS_HOME}/templates/etl-template.yaml \\
+compile-env.sh ${JENKINS_HOME}/template/etl-template.yaml \\
 ${ETL_TEMPLATE_OUTPUT} \\
 "$JSON_STRING"
 
@@ -163,5 +167,6 @@ fi
 }
 
 String getParamString(key, value) {
-    return '-' + key + ' \${' + key + '} '
+    return '-' + key + ' \\"\${' + key + '}\\" '
+    //return '-' + key + ' \${' + key + '} '
 }
