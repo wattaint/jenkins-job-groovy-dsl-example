@@ -17,13 +17,14 @@ def createJobStat() {
     }
     job('Tools/stats') {
         steps {
-            shell('''\
-export ETL_BUCKET_NAME="''' + Utils.getBucketName() + '''"
-export ETL_PROJECT_ID="'''  + Utils.getGcsServiceAccountData().project_id + '''"
-export ETL_IMAGE_VERSION_FILE_NAME="'''+Utils.getEtlImageConf().etl_image_version_filename+'''"
-export ETL_IMAGE_VERSION_FILE_PATH=${JENKINS_HOME}/'''+Utils.getEtlImageConf().etl_image_dir+'''/${ETL_IMAGE_VERSION_FILE_NAME}
-python ${JENKINS_HOME}/template/ocp-job-stats.py
-            ''')
+            shell("""
+export ETL_BUCKET_NAME="${Utils.getBucketName()}"
+export ETL_PROJECT_ID="${Utils.getGcsServiceAccountData().project_id}"
+export ETL_CLIENT_EMAIL="${Utils.getGcsServiceAccountData().client_email}"
+export ETL_IMAGE_VERSION_FILE_NAME="${Utils.getEtlImageConf().etl_image_version_filename}"
+export ETL_IMAGE_VERSION_FILE_PATH="${JENKINS_HOME}/${Utils.getEtlImageConf().etl_image_dir}/${Utils.getEtlImageConf().etl_image_version_filename}"
+python \${JENKINS_HOME}/template/ocp-job-stats.py
+""")
         }
 
         triggers {
