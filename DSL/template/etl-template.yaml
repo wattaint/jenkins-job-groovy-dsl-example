@@ -15,15 +15,9 @@ spec:
         - name: TZ
           value: Etc/UTC
       command: 
-        # - "/bin/sh"
-        # - "-c"
-        - "java"
-        - "-XX:+UnlockExperimentalVMOptions"
-        - "-XX:+UseCGroupMemoryLimitForHeap"
-        - "-XX:MaxRAMFraction=1" 
-        - "-jar"
-        - "acn-dp-generic-database-etl.jar"
-        - '<%- PARAMS %>'
+        - "/bin/sh"
+        - "-c"
+        - 'java -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:MaxRAMFraction=1 -jar acn-dp-generic-database-etl.jar <%- PARAMS %>'
       volumeMounts:
           # name must match the volume name below
           - name: secret-volume
