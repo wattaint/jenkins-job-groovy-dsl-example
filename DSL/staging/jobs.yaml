@@ -4,8 +4,8 @@ secretName: gcp-dp-gcs
 _job: &default_job
   envTier: staging
   fetchFromLastSuccess: "1 hour ago"
-  username: "{crypt}ADAfIeF-buwkHykM20_Kx81Ro9rBsBIfCO6vOZq7Wja3KwLOgFHTP4on4Dv8VS8oCKT3RFmP1N3v"
-  password: "{crypt}ADAfIeHUGfzCgrfWy4_HYwfMvrYIRixBnUtpcV0WEuskFaAJbzUyZ_VjThjbsYY1actMJwHWWL8RFAI3XzuJIor6OHcXrRF0oKkLYBUmVQYQ7iQCUuSv8z8"
+  username: "{crypt}AM6XgWxlQ75wgyyM_4XfFOhelP64jAdm4sZlLeYFlvU4ZpgW9p3yRNF6xS24_n8GQCoFPWX9DB4f"
+  password: "{crypt}AM6XgWw-qwqAsUyKtUHfzxrjNW3ZGj-BgBk4x07Yo7AbVkAfAylEvLDg23du-gem-PyfzwBfrn_KjirqQsd9jSQuv2A8EmDDKAowytE0IFA17Ks4SQBlaBw"
   bucketName: acm-dp-ocp-eq-vn-staging-source-archive
   trigger_cron: "H */1 * * *"
 
