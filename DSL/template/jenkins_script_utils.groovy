@@ -1,3 +1,5 @@
+import groovy.json.*
+
 itemList = """
 @Grab('org.yaml:snakeyaml')
 import org.yaml.snakeyaml.Yaml
@@ -11,7 +13,7 @@ println "=================================="
 return itemList
 """
 
-etl_image_conf = """
+jsonConf = """
 import groovy.json.JsonSlurper
 println "========== Load JSON config ============"
 def inputFile = new File("${WORKSPACE}/${CHECKOUT_PATH}/config.json")
@@ -74,13 +76,19 @@ def getItemList(){
     return itemListEval
 }
 
-etl_image_confEval = null
-def getEtlImageConf() {
-    if (etl_image_confEval == null){
-        println("-- get etl_image_conf --")
-        etl_image_confEval = evaluate(etl_image_conf)
+jsonConfEval = null
+def getEtlConfig() {
+    if (jsonConfEval == null){
+        jsonConfEval = evaluate(jsonConf)
     }
-    return etl_image_confEval
+    return jsonConfEval.etl
+}
+
+def getSecretConfig() {
+  if (jsonConfEval == null){
+        jsonConfEval = evaluate(jsonConf)
+    }
+    return jsonConfEval.secret
 }
 
 gcsServiceAccountDataEval = null
@@ -99,6 +107,35 @@ def getBucketName() {
         getBucketNameEval = evaluate(bucketName)
     }
     return getBucketNameEval
+}
+
+String getLatestBuildTagName(String defaultTagName = '0.0.0' ) {
+  def etl = getEtlConfig()
+  def latest = defaultTagName
+  versionfile = new File("${JENKINS_HOME}/${etl.image_version_dir_name}/${etl.image_version_filename}")
+  if (versionfile.exists() && versionfile.canRead()) {
+    latest = versionfile.text
+  } else {
+    latest = defaultTagName
+  }
+
+  return latest
+
+}
+
+String toJson(obj) {
+  new JsonBuilder( obj ).toString()
+}
+
+def getPodTypeConfigValues(name) {
+  def podTypes = getEtlConfig().templates
+  def defaultPodType = podTypes['default']
+  def confPodType = podTypes[name]
+  if (confPodType) {
+    return confPodType 
+  } else {
+    return defaultPodType
+  }
 }
 
 return this

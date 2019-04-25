@@ -1,22 +1,45 @@
+################################################################################
+################################################################################
+
 kind: "BuildConfig"
 apiVersion: "v1"
 metadata:
   name: "etl-eq-build" 
 spec:
   nodeSelector:
-    deployment-nodegroup: %ENV_TIER%
+    deployment-nodegroup: "<%- ENV_TIER %>"
   source:
     type: "Git"
     git: 
-      uri: "https://bitbucket.org/ascendcorp/acm-dp-vn-etl-config"
+      uri: "<%- BITBUCKET_DSL_REPO %>"
+      <% if (TAG_NAME == 'latest') { %>
       ref: "master"
+      <% } else { %>
+      ref: "<%- TAG_NAME %>"
+      <% } %>
     sourceSecret:
       name: "git-token"
+    dockerfile: >-
+      FROM <%- GCR_BASE %>/acn.dp.generic.database.etl.base:latest
+
+      # Use ETL root path, as buildconfig in OCP will consider the project at the root level instead of relative path.
+      
+      ADD ETL/config /usr/src/app/target/profile
+
+      RUN ls -al /usr/src/app/target/profile
+      
+      <% if (ETL_APPLICATION == 'equator') { %>
+      USER root
+
+      RUN ln -s /usr/src/app/target/profile/acm-eq /usr/src/app/target/profile/acm-eq-vault
+      
+      USER etl
+      <% } %>
+
   strategy: 
     type: "Docker"
     dockerStrategy:
       contextDir: "ETL"
-      dockerfilePath: "ETL/Dockerfile"
       forcePull: true
       pullSecret:
         name: "gcr-docker-oauth"
@@ -30,6 +53,9 @@ spec:
   output:
     to:
       kind: "DockerImage"
-      name: "us.gcr.io/acm-vn-staging/acm.dp.vn.generic.database.etl:%TAG_NAME%"
+      name: "<%- GCR_BASE %>/<%- ETL_IMAGE_PROJECT %>:<%- TAG_NAME -%>"
     pushSecret:
       name: "gcr-docker-oauth"
+
+################################################################################
+################################################################################

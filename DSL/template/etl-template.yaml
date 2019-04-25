@@ -1,20 +1,36 @@
+################################################################################
+################################################################################
+
 apiVersion: v1
 kind: Pod
 metadata:
   name: etl-<%- JOB_BASE_NAME %>-<%- BUILD_NUMBER %>
 spec:
+  strategy:
+    activeDeadlineSeconds: 21600
+    recreateParams:
+      timeoutSeconds: 2400
+    resources: {}
+    type: Recreate
   containers:
-    - name: etl-container
-      workingDir: /usr/src/app/target      
-      image: "us.gcr.io/tmn-th-equator-ci/acm.dp.eq.generic.database.etl:<%- TAG_NAME %>"
-      env:
+    - workingDir: /usr/src/app/target
+      name: etl-container
+      image: "<%- GCR_BASE %>/<%- ETL_IMAGE_PROJECT %>:<%- TAG_NAME %>"
+      imagePullPolicy: Always
+      env: # Do not change order of env !! need for config.json !!
+        - name: JAVA_OPTS 
+          value: -Xmx1024m -Xms256m
         - name: GOOGLE_APPLICATION_CREDENTIALS
           value: /opt/service-account/<%- SERVICE_ACCOUNT %>
-        - name: JAVA_OPTS
-          value: -Xmx1024m -Xms256m
         - name: TZ
-          value: Etc/UTC
-      command: 
+          value: <%- TZ %>
+        <% if (env.SECRET_TYPE == 'vault') { %>
+        - name: VAULT_LEADER
+          value: <%- VAULT_LEADER %>
+        - name: VAULT_TOKEN
+          value: <%- VAULT_TOKEN %>
+        <% } %>
+      command:
         - "/bin/sh"
         - "-c"
         - 'java -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:MaxRAMFraction=1 -jar acn-dp-generic-database-etl.jar <%- PARAMS %>'
@@ -25,11 +41,11 @@ spec:
             readOnly: true
       resources:
         limits:
-          cpu: 512m
+          cpu: 1000m
           memory: 1024Mi
         requests:
-          cpu: 128m
-          memory: 512Mi
+          cpu: 500m
+          memory: 1024Mi
   imagePullSecrets:
     - name: gcr-docker-oauth
   nodeSelector:
@@ -37,5 +53,7 @@ spec:
   volumes:
     - name: secret-volume
       secret:
-        secretName: <%- SECRET_NAME %>
+        secretName: "<%- SECRET_NAME %>"
   restartPolicy: Never
+################################################################################
+################################################################################

@@ -21,8 +21,8 @@ def createJobStat() {
 export ETL_BUCKET_NAME="${Utils.getBucketName()}"
 export ETL_PROJECT_ID="${Utils.getGcsServiceAccountData().project_id}"
 export ETL_CLIENT_EMAIL="${Utils.getGcsServiceAccountData().client_email}"
-export ETL_IMAGE_VERSION_FILE_NAME="${Utils.getEtlImageConf().etl_image_version_filename}"
-export ETL_IMAGE_VERSION_FILE_PATH="${JENKINS_HOME}/${Utils.getEtlImageConf().etl_image_dir}/${Utils.getEtlImageConf().etl_image_version_filename}"
+export ETL_IMAGE_VERSION_FILE_NAME="${Utils.getEtlConfig().image_version_filename}"
+export ETL_IMAGE_VERSION_FILE_PATH="${JENKINS_HOME}/${Utils.getEtlConfig().image_version_dir_name}/${Utils.getEtlConfig().image_version_filename}"
 python \${JENKINS_HOME}/template/ocp-job-stats.py
 """)
         }
@@ -70,16 +70,31 @@ def createJob(String folderName, String jobName, LinkedHashMap params, String se
         String paramsString = ""
         parameters {
             params.each { key, value ->
-                if (['trigger_cron'].contains(key)) {
-
+                if (["trigger_cron", "retry_build"].contains(key)) {
                 } else {
                     // def shouldUseDblQuote = [' '].find { item -> value.contains(item) }
                     // if (shouldUseDblQuote)
                     //     value = '\"'+value+'\"'
                         
                     stringParam(key, value, '')
-                    paramsString += getParamString(key, value)
+
+                    if (["podType"].contains(key)) {
+                    } else {
+                        paramsString += getParamString(key, value)
+                    }
                 }
+
+                // if (key != "trigger_cron" && key != "retry_build") {
+                    
+                //     if (value.contains(' '))
+                //             value = '\"'+value+'\"'
+                            
+                //     stringParam(key, value, '')
+                    
+                //     if (key != "podType"){                        
+                //         paramsString += getParamString(key, value)                    
+                //     }
+                // }
             }
         }
         logRotator {
@@ -90,17 +105,28 @@ def createJob(String folderName, String jobName, LinkedHashMap params, String se
                 cron(params.trigger_cron)
             }
         }
+
+        String podTypeString = "default"
+        if (params.podType != null){
+            podTypeString = params.podType
+        }
+        
+        String podTypeConfigValues = Utils.toJson(Utils.getPodTypeConfigValues(podTypeString))
+
         steps {
             shell('''\
 #!/bin/bash
 set -e
 
-export ETL_IMAGE_VERSION_FILE_NAME="''' + Utils.getEtlImageConf().etl_image_version_filename + '''"
-export ETL_IMAGE_VERSION_FILE_PATH=${JENKINS_HOME}/'''+Utils.getEtlImageConf().etl_image_dir+'''/${ETL_IMAGE_VERSION_FILE_NAME}
-export ETL_TEMPLATE_OUTPUT=etl-${JOB_BASE_NAME}-${BUILD_NUMBER}.yaml
-export PARAMS="'''+paramsString.trim()+'''"
-# Escape "/" -> "\\/" and "&" -> "\\&" charactor
-export ESC_PARAMS=`echo $PARAMS |sed -e 's#&#\\\\\\\\\\\\\\\\\\\\\\\\&#g' |sed -e 's#/#\\\\\\/#g'`
+SCRIPT_DIR_PATH=${JENKINS_HOME}/template/scripts
+export SECRET_TYPE="''' + Utils.getSecretConfig().type + '''"
+export ETL_IMAGE_PROJECT="''' + Utils.getEtlConfig().image_project + '''"
+export ETL_IMAGE_VERSION_FILE_NAME="''' + Utils.getEtlConfig().image_version_filename + '''"
+export ETL_IMAGE_VERSION_FILE_PATH=${JENKINS_HOME}/''' + Utils.getEtlConfig().image_version_dir_name + '''/${ETL_IMAGE_VERSION_FILE_NAME}
+export ETL_TEMPLATE_OUTPUT=${WORKSPACE}/etl-${JOB_BASE_NAME}-${BUILD_NUMBER}.yaml
+export ETL_TEMPLATE_CONFIG=\'''' + podTypeConfigValues + '''\'
+export PARAMS="''' + paramsString.trim() + '''"
+
 if [ -f ${ETL_IMAGE_VERSION_FILE_PATH} ]; then
     etl_tag=$(cat $ETL_IMAGE_VERSION_FILE_PATH)
     if [ -z "${etl_tag}" ]; then
@@ -116,14 +142,10 @@ else
     exit 255
 fi
 
-#  sed "s/%BUILD_NUMBER%/${BUILD_NUMBER}/g" ~/template/etl-template.yaml \\
-#  |sed "s/%JOB_BASE_NAME%/${JOB_BASE_NAME}/g" \\
-#  |sed "s/%SERVICE_ACCOUNT%/'''+serviceAccountJson+'''/g" \\
-#  |sed "s/%SECRET_NAME%/'''+secretName+'''/g" \\
-#  |sed "s/%TAG_NAME%/${TAG_NAME}/g" \\
-#  |sed "s/%ENV_TIER%/${ENV_TIER}/g" \\
-#  |sed "s/%PARAMS%/$ESC_PARAMS/g" \\
-#  > etl-${JOB_BASE_NAME}-${BUILD_NUMBER}.yaml
+if [ "${SECRET_TYPE}" == "vault" ]; then
+  echo "--- do get-vault ---"
+  source ${SCRIPT_DIR_PATH}/get-vault.sh
+fi
 
 JSON_STRING=$( jq -n \\
                   --arg service_account "''' + serviceAccountJson + '''" \\
@@ -134,12 +156,18 @@ compile-env.sh ${JENKINS_HOME}/template/etl-template.yaml \\
 ${ETL_TEMPLATE_OUTPUT} \\
 "$JSON_STRING"
 
+coffee ${SCRIPT_DIR_PATH}/set-yaml.coffee \\
+--in ${ETL_TEMPLATE_OUTPUT} \\
+--out ${ETL_TEMPLATE_OUTPUT} \\
+--values "${ETL_TEMPLATE_CONFIG}"
+
 cp ${JENKINS_HOME}/template/wait-until-pod.sh wait-until-pod.sh
 chmod 755 wait-until-pod.sh
 
 cat ${ETL_TEMPLATE_OUTPUT}
 
 oc create -f ${ETL_TEMPLATE_OUTPUT}
+rm -f ${ETL_TEMPLATE_OUTPUT}
 
 # Wait until the pods is running, within 5 mins timeout
 POD_NAME=etl-${JOB_BASE_NAME}-${BUILD_NUMBER}
@@ -148,14 +176,14 @@ POD_NAME=etl-${JOB_BASE_NAME}-${BUILD_NUMBER}
 ./wait-until-pod.sh $POD_NAME Running
 
 # Pipe Log to Jenkins Console
-oc logs -f etl-${JOB_BASE_NAME}-${BUILD_NUMBER} || true
+oc logs -f ${POD_NAME} || true
 ''')
             shell('''\
 POD_NAME=etl-${JOB_BASE_NAME}-${BUILD_NUMBER}
 POD_PHASE=$(oc get po "$POD_NAME" --template={{.status.phase}})
 oc describe pod $POD_NAME
 oc delete pod $POD_NAME
-rm etl-${JOB_BASE_NAME}-${BUILD_NUMBER}.yaml
+#rm etl-${JOB_BASE_NAME}-${BUILD_NUMBER}.yaml
 if [ "$POD_PHASE" != "Succeeded" ]
 then
 echo "POD enter Failed state"
@@ -164,6 +192,16 @@ break;
 fi
 ''')
         }
+
+    
+    if(params.retry_build != null){
+        publishers{
+             retryBuild {
+                retryLimit(params.retry_build.toInteger())
+                fixedDelay(300)
+              }
+        }
+       }
     }
 }
 

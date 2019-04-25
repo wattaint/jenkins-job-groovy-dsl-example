@@ -1,5 +1,46 @@
 {
-    "etl_image_dir": "image_version",
-    "etl_image_version_filename": "acm.dp.eq.generic.database.etl.version"
+  "secret": {
+    "type": "crypt"
+  },
+  "etl": {
+    "application": "equator",
+    "build_envs": ["qa"],
+    "image_version_dir_name": "image_version",
+    "image_version_filename": "acm.dp.eq.generic.database.etl.version",
+    "image_project": "acm.dp.eq.generic.database.etl",
+    "templates": {
+      "default": [
+        ["spec.containers[0].env[0].value",               "-Xmx1024m -Xms256m"],
+        ["spec.containers[0].resources.limits.memory",    "1024Mi"]
+      ],
+      "2gb": [
+        ["spec.containers[0].env[0].value",               "-Xmx2048m -Xms512m"],
+        ["spec.containers[0].resources.limits.memory",    "2048Mi"]
+      ],
+      "6gb": [
+        ["spec.containers[0].env[0].value",               "-Xmx6144m -Xms256m"],
+        ["spec.containers[0].resources.limits.memory",    "6144Mi"]
+      ],
+      "8gb": [
+        ["spec.containers[0].env[0].value",               "-Xmx8192m -Xms1024m"],
+        ["spec.containers[0].resources.limits.memory",    "8192Mi"]
+      ],
+      "10gb": [
+        ["spec.containers[0].env[0].value",               "-Xmx10240m -Xms1024m"],
+        ["spec.containers[0].resources.limits.memory",    "10240Mi"]
+      ],
+      "12gb": [
+        ["spec.containers[0].env[0].value",               "-Xmx12288m -Xms1024m"],
+        ["spec.containers[0].resources.limits.memory",    "12288Mi"]
+      ],
+      "14gb": [
+        ["spec.containers[0].env[0].value",               "-Xmx14336m -Xms1024m"],
+        ["spec.containers[0].resources.limits.memory",    "14336Mi"]
+      ],
+      "16gb": [
+        ["spec.containers[0].env[0].value",               "-Xmx16384m -Xms1024m"],
+        ["spec.containers[0].resources.limits.memory",    "16384Mi"]
+      ]
+    }
+  }
 }
-  

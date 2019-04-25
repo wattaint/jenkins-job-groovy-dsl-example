@@ -4,9 +4,9 @@ Utils = evaluate evaluate("""
 """)
 
 job('Tools/Update_GCS_Service_Account_Credential') {
-  triggers {
-    cron("H * * * *")
-  }
+  //triggers {
+  //  cron("H * * * *")
+  //}
   steps {
     systemGroovyCommand('''
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.*
