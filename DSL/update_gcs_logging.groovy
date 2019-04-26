@@ -3,7 +3,7 @@ Utils = evaluate evaluate("""
   new File("$JENKINS_HOME/template/jenkins_script_utils.groovy").text
 """)
 
-job('Tools/Update_GCS_Service_Account_Credential') {
+job('Tools/Update_GCS_Logging') {
   //triggers {
   //  cron("H * * * *")
   //}
