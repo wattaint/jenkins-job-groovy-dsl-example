@@ -15,6 +15,11 @@ def createJobStat() {
     folder('Tools') {
         description('Folder contains monitoring or utils jobs')
     }
+    
+    job('Tools/after_init') {
+        
+    }
+
     job('Tools/stats') {
         steps {
             shell("""
@@ -23,7 +28,7 @@ export ETL_PROJECT_ID="${Utils.getGcsServiceAccountData().project_id}"
 export ETL_CLIENT_EMAIL="${Utils.getGcsServiceAccountData().client_email}"
 export ETL_IMAGE_VERSION_FILE_NAME="${Utils.getEtlConfig().image_version_filename}"
 export ETL_IMAGE_VERSION_FILE_PATH="${JENKINS_HOME}/${Utils.getEtlConfig().image_version_dir_name}/${Utils.getEtlConfig().image_version_filename}"
-python \${JENKINS_HOME}/template/ocp-job-stats.py
+python \${JENKINS_HOME}/template/scripts/ocp-job-stats.py
 """)
         }
 
@@ -161,7 +166,7 @@ coffee ${SCRIPT_DIR_PATH}/set-yaml.coffee \\
 --out ${ETL_TEMPLATE_OUTPUT} \\
 --values "${ETL_TEMPLATE_CONFIG}"
 
-cp ${JENKINS_HOME}/template/wait-until-pod.sh wait-until-pod.sh
+cp ${SCRIPT_DIR_PATH}/wait-until-pod.sh wait-until-pod.sh
 chmod 755 wait-until-pod.sh
 
 cat ${ETL_TEMPLATE_OUTPUT}

@@ -4,11 +4,12 @@ function log {
 
 function check_error_response {
   json_resp=$1
+  log "-- Checking error response --"
   errors=$(echo $json_resp | jq -r '.errors')
   if [ "${errors}" != "null"  ]; then
     log "Response Error!! ${errors}"
     log "message: ---"
-    echo $errors
+    jq . <<< $json_resp
     log "Exit .."
     exit 1
   fi
@@ -59,10 +60,13 @@ VAULT_DATA=$(echo $resp | jq -r '.data')
 
 IS_QUERY_SUCCESS=$(echo ${VAULT_DATA} | jq -r '.isQuerySuccess')
 if [[ ${IS_QUERY_SUCCESS} != "true" ]]; then
-  log "Default Value of isQuerySuccess is ${IS_QUERY_SUCCESS}."
-  log "ERROR!! : Cannot fetch data from vault."
-  exit 1
-
+  if [ "${IS_QUERY_SUCCESS}" == "null" ]; then
+    log "field IS_QUERY_SUCCESS not found skip checking .."
+  else
+    log "Default Value of isQuerySuccess is ${IS_QUERY_SUCCESS}."
+    log "ERROR!! : Cannot fetch data from vault."
+    exit 1
+  fi
 elif [[ ${IS_QUERY_SUCCESS} == "true" ]]; then
   log "Default Value of isQuerySuccess is ${IS_QUERY_SUCCESS}."
   log "SUCCESS!! : Fetched data from vault."
