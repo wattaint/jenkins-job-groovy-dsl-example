@@ -3,7 +3,8 @@ Utils = evaluate evaluate("""
   new File("$JENKINS_HOME/template/jenkins_script_utils.groovy").text
 """)
 
-job('Tools/Update_GCS_Logging') {
+jobFullName = 'Tools/Update_GCS_Logging'
+job(jobFullName) {
   //triggers {
   //  cron("H * * * *")
   //}
@@ -92,4 +93,5 @@ Jenkins.instance.getAllItems(AbstractProject.class).each { job ->
   }
 }
 
+Utils.addTriggerByAfterRun('Tools/after_init', jobFullName)
 

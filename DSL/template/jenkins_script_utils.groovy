@@ -1,4 +1,6 @@
 import groovy.json.*
+import jenkins.model.Jenkins
+import hudson.model.*
 
 itemList = """
 @Grab('org.yaml:snakeyaml')
@@ -136,6 +138,35 @@ def getPodTypeConfigValues(name) {
   } else {
     return defaultPodType
   }
+}
+
+def addTriggerByAfterRun(upstreamJobFullName, jobStatFullName) {
+    println("-- [${jobStatFullName}] -- checking downstream for ${upstreamJobFullName}")
+    def afterInitJob = Jenkins.instance.getAllItems(AbstractProject.class).find {
+        [upstreamJobFullName].contains(it.fullName)
+    }
+    if (afterInitJob) {
+        def selfJob = Jenkins.instance.getAllItems(AbstractProject.class).find {
+            [jobStatFullName].contains(it.fullName)
+        }
+        if (selfJob) {
+            def publishersList = afterInitJob.getPublishersList()
+            def exists = publishersList.find { 
+                if (it.getClass().getName() == 'hudson.tasks.BuildTrigger') {
+                    return [jobStatFullName].contains(it.getChildProjectsValue())
+                }
+                return false
+            }
+            if (exists) {
+                println("-- [${jobStatFullName}] -- skip downstream for ${upstreamJobFullName}")
+            } else {
+                println("-- [${jobStatFullName}] -- add downstream for ${upstreamJobFullName}")
+                def trigger = new hudson.tasks.BuildTrigger(jobStatFullName, true)
+                publishersList.add(trigger)
+                afterInitJob.save()
+            }
+        }
+    }
 }
 
 return this
